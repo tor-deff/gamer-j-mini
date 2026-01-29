@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมจับคู่ไอโมจิ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 30px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .rules {
+            background: #f0f8ff;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            color: #34495e;
+        }
+        .rules h2 {
+            color: #2980b9;
+            margin-bottom: 10px;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            justify-content: center;
+            margin: 0 auto 30px;
+            max-width: 520px;
+        }
+        .card {
+            width: 110px;
+            height: 110px;
+            perspective: 1200px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transform-style: preserve-3d;
+        }
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 4rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .card-front {
+            background: linear-gradient(135deg, #ffffff, #f5f7fa);
+            transform: rotateY(180deg);
+        }
+        .card-back {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 3.5rem;
+        }
+        .card.matched .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card.matched {
+            pointer-events: none;
+            transform: scale(1.03);
+        }
+        button {
+            padding: 14px 40px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        button:hover {
+            background: #219653;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(39,174,96,0.3);
+        }
+        #message {
+            font-size: 2rem;
+            margin-top: 30px;
+            color: #27ae60;
+            font-weight: 600;
+            min-height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>เกมจับคู่ไอโมจิ</h1>
+        
+        <div class="rules">
+            <h2>กติกา</h2>
+            <p>มีทั้งหมด 12 การ์ด (6 คู่ไอโมจิ)</p>
+            <p>คลิกเพื่อพลิกการ์ดดูไอโมจิ</p>
+            <p>พลิก 2 ใบ ถ้าคู่เดียวกันจะค้างไว้ ถ้าไม่เหมือนจะพลิกกลับ</p>
+            <p>จับคู่ให้ครบทั้ง 6 คู่เพื่อชนะ!</p>
+        </div>
+
+        <div class="game-board" id="gameBoard"></div>
+
+        <button id="restart">เริ่มเกมใหม่</button>
+        
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const emojis = [
+            '🍎', '🍌', '🍇', '🍓', '🍊', '🍉',
+            '🍎', '🍌', '🍇', '🍓', '🍊', '🍉'
+        ];
+
+        const board = document.getElementById('gameBoard');
+        const message = document.getElementById('message');
+        const restartBtn = document.getElementById('restart');
+
+        let flippedCards = [];
+        let matchedPairs = 0;
+
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        function createCard(emoji) {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.dataset.emoji = emoji;
+
+            const inner = document.createElement('div');
+            inner.classList.add('card-inner');
+
+            const front = document.createElement('div');
+            front.classList.add('card-front');
+            front.textContent = emoji;
+
+            const back = document.createElement('div');
+            back.classList.add('card-back');
+            back.textContent = '❓';
+
+            inner.appendChild(front);
+            inner.appendChild(back);
+            card.appendChild(inner);
+
+            card.addEventListener('click', flipCard);
+
+            return card;
+        }
+
+        function initGame() {
+            board.innerHTML = '';
+            message.textContent = '';
+            flippedCards = [];
+            matchedPairs = 0;
+
+            const shuffled = shuffle(emojis.slice());
+
+            shuffled.forEach(emoji => {
+                const card = createCard(emoji);
+                board.appendChild(card);
+            });
+        }
+
+        function flipCard() {
+            if (flippedCards.length === 2 || this.classList.contains('flipped') || this.classList.contains('matched')) {
+                return;
+            }
+
+            this.classList.add('flipped');
+            flippedCards.push(this);
+
+            if (flippedCards.length === 2) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+
+            if (card1.dataset.emoji === card2.dataset.emoji) {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+
+                flippedCards = [];
+
+                if (matchedPairs === 6) {
+                    message.textContent = 'ยินดีด้วย! คุณชนะ 🎉✨';
+                }
+            } else {
+                setTimeout(() => {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    flippedCards = [];
+                }, 1200);
+            }
+        }
+
+        restartBtn.addEventListener('click', initGame);
+
+        // เริ่มเกมครั้งแรก
+        initGame();
+    </script>
+</body>
+</html>
